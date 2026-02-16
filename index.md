@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Fast, Cheap, and Accurate: Optimizing LLM Inference with vLLM and Quantization
 
 Welcome to our 50-minute workshop for DeveloperWeek 2026. We're excited to introduce you to the world of vLLM and Quantized models. 

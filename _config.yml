@@ -1,10 +1,14 @@
-theme: jekyll-theme-slate
+remote_theme: pages-themes/slate@v0.2.0
 title: "Fast, Cheap, and Accurate: Optimizing LLM Inference"
 description: "DeveloperWeek 2026 Workshop"
 
 # GitHub Pages settings
 baseurl: ""
 url: ""
+
+# Plugins
+plugins:
+  - jekyll-remote-theme
 
 # Markdown settings
 markdown: kramdown
