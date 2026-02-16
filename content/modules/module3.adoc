@@ -1,0 +1,20 @@
+# Module 3: 
+
+## Install lm-eval-harness framework
+
+[source,sh,role="execute"]
+----
+pip install lm-eval[api]
+----
+
+
+## Run basic evaluation on our quantized model for accuracy
+
+[source,sh,role="execute"]
+----
+lm-eval --model local-completions \
+  --model_args model=RedHatAI/gemma-3-1b-it-quantized.w8a8,base_url=http://127.0.0.1:8000/v1/completions,num_concurrent=4 \
+  --tasks arc_easy \
+  --batch_size 8 \
+  --output_path ./lm_eval_out_arc_easy.json
+----

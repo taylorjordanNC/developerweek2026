@@ -1,0 +1,626 @@
+# Module 2: Run our first benchmark with GuideLLM
+
+## Install GuideLLM
+
+[source,sh,role="execute"]
+----
+pip install guidellm
+----
+
+## Run a basic benchmark using GuideLLM CLI tool
+
+[source,sh,role="execute"]
+----
+guidellm benchmark   --target "http://localhost:8000"   --rate-type sweep   --max-seconds 30   --data "prompt_tokens=256,output_tokens=128"
+----
+
+## During benchmark, check gpu utilization
+
+Ensure you're in a second terminal window:
+
+[source,sh,role="execute"]
+----
+nvtop
+----
+
+## Evaluate benchmark results
+
+At the end of the benchmark run, GuideLLM creates a `benchmarks.json` file in your current directory in addition to a graphical output in your terminal. Let's take the `json` output and use our LLM to analyze the data. 
+
+### Create script to analyze json data with LLM 
+
+[source,sh,role="execute"]
+----
+vim guidellm_llm_analyzer.py
+----
+
+Paste the following python code into the terminal editor:
+
+[source,python,role="execute"]
+----
+#!/usr/bin/env python3
+"""
+GuideLLM LLM-first benchmark analyzer (token-safe).
+
+Changes vs prior version:
+- Always uses the LLM path (no optional mode).
+- Avoids context overflows by defaulting to: computed summary ONLY.
+- Optional: include a small, curated "thin slice" of the raw JSON (not full/truncated dump).
+- Enforces a conservative character budget on the user message.
+
+Assumptions:
+- Your local model server is OpenAI-compatible Chat Completions:
+    POST http://localhost:8000/v1/chat/completions
+    {
+      "model": "your-model-name",
+      "messages": [{"role":"system","content":"..."}, {"role":"user","content":"..."}],
+      "temperature": 0.2
+    }
+- Response includes: choices[0].message.content (or choices[0].text fallback)
+
+Usage:
+  python guidellm_llm_analyzer.py benchmarks.json \
+    --model-target http://localhost:8000/v1/chat/completions \
+    --model-name my-local-model
+
+Optional:
+  --out llm_analysis.md
+  --timeout 90
+  --include-raw-slice
+  --raw-slice-runs 8
+  --max-user-chars 24000
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import os
+import re
+import statistics
+import sys
+import textwrap
+from dataclasses import dataclass, asdict
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import urllib.request
+import urllib.error
+
+
+# -----------------------------
+# Utilities
+# -----------------------------
+
+def load_json(path: str) -> Any:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_text(path: str, text: str) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text.rstrip() + "\n")
+
+
+def safe_get(d: Any, keys: List[Union[str, int]], default=None):
+    cur = d
+    for k in keys:
+        try:
+            if isinstance(cur, dict) and isinstance(k, str):
+                cur = cur.get(k)
+            elif isinstance(cur, list) and isinstance(k, int) and 0 <= k < len(cur):
+                cur = cur[k]
+            else:
+                return default
+        except Exception:
+            return default
+        if cur is None:
+            return default
+    return cur
+
+
+def is_number(x: Any) -> bool:
+    return isinstance(x, (int, float)) and not isinstance(x, bool)
+
+
+def percentile(values: List[float], p: float) -> Optional[float]:
+    if not values:
+        return None
+    if p <= 0:
+        return min(values)
+    if p >= 100:
+        return max(values)
+    vals = sorted(values)
+    k = (len(vals) - 1) * (p / 100.0)
+    f = math.floor(k)
+    c = math.ceil(k)
+    if f == c:
+        return vals[int(k)]
+    d0 = vals[f] * (c - k)
+    d1 = vals[c] * (k - f)
+    return d0 + d1
+
+
+def mean(values: List[float]) -> Optional[float]:
+    return statistics.mean(values) if values else None
+
+
+def stdev(values: List[float]) -> Optional[float]:
+    if len(values) < 2:
+        return None
+    return statistics.stdev(values)
+
+
+def coef_of_variation(values: List[float]) -> Optional[float]:
+    m = mean(values)
+    sd = stdev(values)
+    if m is None or sd is None or m == 0:
+        return None
+    return sd / m
+
+
+def now_iso() -> str:
+    return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+
+
+# -----------------------------
+# Schema-agnostic extraction
+# -----------------------------
+
+COMMON_LATENCY_KEYS = [
+    "latency_ms", "latency", "total_latency_ms", "total_latency",
+    "request_latency_ms", "request_latency",
+    "ttft_ms", "time_to_first_token_ms", "time_to_first_token",
+    "inter_token_latency_ms", "itl_ms", "decode_latency_ms", "per_token_latency_ms",
+]
+
+COMMON_THROUGHPUT_KEYS = [
+    "tokens_per_second", "tok_per_s", "throughput_toks_per_s",
+    "output_tokens_per_second", "completion_tokens_per_second",
+]
+
+COMMON_TOKEN_KEYS = [
+    "prompt_tokens", "input_tokens", "prefill_tokens",
+    "completion_tokens", "output_tokens", "generated_tokens",
+    "total_tokens",
+]
+
+COMMON_SUCCESS_KEYS = ["success", "ok", "passed"]
+COMMON_ERROR_KEYS = ["error", "errors", "exception", "failed", "failure_reason", "status"]
+
+
+def walk(obj: Any, path: str = "") -> List[Tuple[str, Any]]:
+    out: List[Tuple[str, Any]] = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            p = f"{path}.{k}" if path else str(k)
+            out.extend(walk(v, p))
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            p = f"{path}[{i}]"
+            out.extend(walk(v, p))
+    else:
+        out.append((path, obj))
+    return out
+
+
+def extract_numeric_series(data: Any, key_candidates: List[str]) -> Dict[str, List[float]]:
+    leaves = walk(data)
+    series: Dict[str, List[float]] = {k: [] for k in key_candidates}
+
+    for p, v in leaves:
+        if not is_number(v):
+            continue
+        leaf_key = re.sub(r"\[\d+\]$", "", p.split(".")[-1])  # strip trailing [i]
+        for cand in key_candidates:
+            if leaf_key == cand or leaf_key.endswith(cand):
+                series[cand].append(float(v))
+
+    return {k: vals for k, vals in series.items() if vals}
+
+
+def guess_runs(data: Any) -> List[Dict[str, Any]]:
+    if isinstance(data, dict):
+        for key in ("results", "benchmarks", "runs", "samples", "requests", "items"):
+            c = data.get(key)
+            if isinstance(c, list) and c and all(isinstance(x, dict) for x in c):
+                return c
+
+    # fallback: largest list of dicts anywhere
+    best: List[Dict[str, Any]] = []
+    stack = [data]
+    while stack:
+        cur = stack.pop()
+        if isinstance(cur, dict):
+            stack.extend(cur.values())
+        elif isinstance(cur, list):
+            if cur and all(isinstance(x, dict) for x in cur):
+                if len(cur) > len(best):
+                    best = cur
+            else:
+                stack.extend(cur)
+    return best
+
+
+# -----------------------------
+# Analysis structures
+# -----------------------------
+
+@dataclass
+class MetricSummary:
+    count: int
+    mean: Optional[float]
+    p50: Optional[float]
+    p90: Optional[float]
+    p95: Optional[float]
+    p99: Optional[float]
+    min: Optional[float]
+    max: Optional[float]
+    stdev: Optional[float]
+    cov: Optional[float]
+
+
+@dataclass
+class ComputedSummary:
+    generated_at: str
+    file: str
+    detected_runs: int
+    metrics: Dict[str, MetricSummary]              # core series summaries
+    token_counts: Dict[str, MetricSummary]         # token fields if present
+    error_rate: Optional[float]
+    detection: Dict[str, Any]                      # what we found / used
+
+
+def summarize(values: List[float]) -> MetricSummary:
+    return MetricSummary(
+        count=len(values),
+        mean=mean(values),
+        p50=percentile(values, 50),
+        p90=percentile(values, 90),
+        p95=percentile(values, 95),
+        p99=percentile(values, 99),
+        min=min(values) if values else None,
+        max=max(values) if values else None,
+        stdev=stdev(values),
+        cov=coef_of_variation(values),
+    )
+
+
+def compute_error_rate(runs: List[Dict[str, Any]]) -> Optional[float]:
+    if not runs:
+        return None
+
+    failures = 0
+    total = 0
+
+    for r in runs:
+        total += 1
+
+        decided = False
+        for k in COMMON_SUCCESS_KEYS:
+            v = r.get(k)
+            if isinstance(v, bool):
+                if not v:
+                    failures += 1
+                decided = True
+                break
+        if decided:
+            continue
+
+        has_error = False
+        for k in COMMON_ERROR_KEYS:
+            v = r.get(k)
+            if isinstance(v, str) and v.strip():
+                if k == "status" and v.lower() in ("ok", "success", "passed", "pass"):
+                    continue
+                has_error = True
+            elif isinstance(v, (list, dict)) and v:
+                has_error = True
+        if has_error:
+            failures += 1
+
+    return (failures / total) if total else None
+
+
+def compute_summary(json_path: str) -> Tuple[ComputedSummary, Any]:
+    data = load_json(json_path)
+    runs = guess_runs(data)
+
+    numeric = extract_numeric_series(
+        data,
+        COMMON_LATENCY_KEYS + COMMON_THROUGHPUT_KEYS + COMMON_TOKEN_KEYS
+    )
+
+    chosen: Dict[str, List[float]] = {}
+
+    total_latency = (
+        numeric.get("latency_ms")
+        or numeric.get("total_latency_ms")
+        or numeric.get("request_latency_ms")
+        or numeric.get("latency")
+        or numeric.get("total_latency")
+        or numeric.get("request_latency")
+    )
+    if total_latency:
+        chosen["latency_ms"] = total_latency
+
+    ttft = numeric.get("ttft_ms") or numeric.get("time_to_first_token_ms") or numeric.get("time_to_first_token")
+    if ttft:
+        chosen["ttft_ms"] = ttft
+
+    itl = (
+        numeric.get("inter_token_latency_ms")
+        or numeric.get("itl_ms")
+        or numeric.get("per_token_latency_ms")
+        or numeric.get("decode_latency_ms")
+    )
+    if itl:
+        chosen["inter_token_latency_ms"] = itl
+
+    tps = (
+        numeric.get("tokens_per_second")
+        or numeric.get("tok_per_s")
+        or numeric.get("throughput_toks_per_s")
+        or numeric.get("output_tokens_per_second")
+        or numeric.get("completion_tokens_per_second")
+    )
+    if tps:
+        chosen["tokens_per_second"] = tps
+
+    metrics_summary: Dict[str, MetricSummary] = {k: summarize(v) for k, v in chosen.items()}
+
+    token_summaries: Dict[str, MetricSummary] = {}
+    for tk in COMMON_TOKEN_KEYS:
+        if tk in numeric and numeric[tk]:
+            token_summaries[tk] = summarize(numeric[tk])
+
+    err_rate = compute_error_rate(runs)
+
+    detection = {
+        "numeric_keys_found": sorted(list(numeric.keys())),
+        "chosen_series": sorted(list(chosen.keys())),
+        "token_fields_found": sorted(list(token_summaries.keys())),
+        "detected_runs": len(runs),
+        "top_level_keys": sorted(list(data.keys())) if isinstance(data, dict) else None,
+    }
+
+    summary = ComputedSummary(
+        generated_at=now_iso(),
+        file=os.path.abspath(json_path),
+        detected_runs=len(runs),
+        metrics=metrics_summary,
+        token_counts=token_summaries,
+        error_rate=err_rate,
+        detection=detection,
+    )
+    return summary, data
+
+
+# -----------------------------
+# Raw JSON thin slicing (optional)
+# -----------------------------
+
+def thin_slice_for_llm(raw_json: Any, max_runs: int = 8) -> Any:
+    """
+    Return a small curated subset of the raw JSON to avoid context overflow.
+    Keeps a bit of metadata + first N run/result items if found.
+    """
+    if not isinstance(raw_json, dict):
+        return raw_json
+
+    out: Dict[str, Any] = {}
+
+    # Keep likely useful top-level metadata if present
+    for k in ("config", "metadata", "model", "system", "environment", "args", "version"):
+        if k in raw_json:
+            out[k] = raw_json[k]
+
+    # Keep top-level aggregate metrics if they exist
+    for k in ("summary", "metrics", "aggregate", "totals"):
+        if k in raw_json:
+            out[k] = raw_json[k]
+
+    # Keep only a few run/result entries
+    for k in ("results", "benchmarks", "runs", "samples", "requests", "items"):
+        v = raw_json.get(k)
+        if isinstance(v, list) and v and all(isinstance(x, dict) for x in v):
+            out[k] = v[:max_runs]
+            break
+
+    # If we didn't find a run list, just return the metadata we collected
+    return out
+
+
+# -----------------------------
+# LLM call
+# -----------------------------
+
+def call_local_llm(
+    model_target: str,
+    model_name: str,
+    system_prompt: str,
+    user_prompt: str,
+    timeout_s: int,
+) -> str:
+    payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": 0.2,
+    }
+
+    req = urllib.request.Request(
+        model_target,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+            data = json.loads(raw)
+
+        content = safe_get(data, ["choices", 0, "message", "content"], default=None)
+        if isinstance(content, str) and content.strip():
+            return content.strip()
+
+        text = safe_get(data, ["choices", 0, "text"], default=None)
+        if isinstance(text, str) and text.strip():
+            return text.strip()
+
+        return json.dumps(data, indent=2)[:6000]
+
+    except urllib.error.HTTPError as e:
+        body = ""
+        try:
+            body = e.read().decode("utf-8", errors="replace")
+        except Exception:
+            pass
+        raise RuntimeError(f"HTTPError {e.code}: {e.reason}\n{body[:2000]}") from e
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"URLError: {e.reason}") from e
+    except Exception as e:
+        raise RuntimeError(f"LLM call failed: {e}") from e
+
+
+def build_prompts(
+    summary: ComputedSummary,
+    raw_json: Any,
+    include_raw_slice: bool,
+    raw_slice_runs: int,
+    max_user_chars: int,
+) -> Tuple[str, str]:
+    system_prompt = (
+        "You are a senior LLM inference performance engineer. "
+        "Analyze GuideLLM benchmark summaries and produce conclusions and actions. "
+        "Focus on latency (p50/p95/p99), TTFT, throughput (tokens/sec), stability/variance, tail behavior, and errors. "
+        "Recommend concrete tuning experiments (batching, concurrency, kv cache, parallelism, prefill/decode tradeoffs). "
+        "If data is missing, say what to collect next and why."
+    )
+
+    summary_str = json.dumps(asdict(summary), indent=2)
+
+    raw_section = ""
+    if include_raw_slice:
+        raw_slice = thin_slice_for_llm(raw_json, max_runs=raw_slice_runs)
+        raw_str = json.dumps(raw_slice, indent=2)
+        raw_section = "\n\nB) Raw JSON thin-slice (context, small on purpose):\n" + raw_str
+
+    user_prompt = textwrap.dedent(f"""
+    Analyze this benchmark.
+
+    A) Computed metric summary (authoritative):
+    {summary_str}
+    {raw_section}
+
+    Deliver output in this structure:
+
+    1) Executive summary (3-6 bullets)
+    2) Key metrics interpretation
+       - latency distribution and tail behavior
+       - TTFT vs decode behavior (if present)
+       - throughput and utilization signals
+       - stability/variance signals
+       - errors/timeouts/OOM hints (if present)
+    3) Likely bottlenecks (ranked, with evidence)
+    4) Recommended tuning/actions (prioritized, concrete knobs/changes)
+    5) Next experiments to run (exact parameters to vary and what success looks like)
+    6) Missing data (what you wish you had, and why)
+    """).strip()
+
+    # Hard cap to reduce chance of exceeding an 8k token context.
+    # (Rough heuristic: keep user chars <= ~24k by default.)
+    if len(user_prompt) > max_user_chars:
+        user_prompt = user_prompt[:max_user_chars] + "\n... (truncated to fit context budget) ..."
+
+    return system_prompt, user_prompt
+
+
+# -----------------------------
+# CLI
+# -----------------------------
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="LLM-first analyzer for GuideLLM benchmarks.json (token-safe)")
+    p.add_argument("json_file", help="Path to GuideLLM benchmarks.json")
+    p.add_argument("--model-target", required=True, help="OpenAI-compatible chat completions URL (local server)")
+    p.add_argument("--model-name", required=True, help="Model name/id to send in the request payload")
+    p.add_argument("--out", help="Write LLM analysis to this file (optional)")
+    p.add_argument("--timeout", type=int, default=60, help="HTTP timeout for local LLM call (seconds)")
+
+    # Token-safety controls
+    p.add_argument("--max-user-chars", type=int, default=24000, help="Hard cap for user prompt length (chars)")
+
+    # Raw slice is OFF by default to avoid overflows
+    p.add_argument("--include-raw-slice", action="store_true", help="Include a small curated slice of raw JSON")
+    p.add_argument("--raw-slice-runs", type=int, default=8, help="How many run/result items to include in raw slice")
+
+    return p.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+
+    if not os.path.exists(args.json_file):
+        print(f"ERROR: file not found: {args.json_file}", file=sys.stderr)
+        return 2
+
+    summary, raw_json = compute_summary(args.json_file)
+
+    system_prompt, user_prompt = build_prompts(
+        summary=summary,
+        raw_json=raw_json,
+        include_raw_slice=args.include_raw_slice,
+        raw_slice_runs=args.raw_slice_runs,
+        max_user_chars=args.max_user_chars,
+    )
+
+    try:
+        llm_text = call_local_llm(
+            model_target=args.model_target,
+            model_name=args.model_name,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            timeout_s=args.timeout,
+        )
+    except Exception as e:
+        print(f"ERROR calling local LLM: {e}", file=sys.stderr)
+        print("\nComputed summary (LLM call failed):")
+        print(json.dumps(asdict(summary), indent=2))
+        return 3
+
+    print(llm_text)
+
+    if args.out:
+        save_text(args.out, llm_text)
+        print(f"\nWrote LLM analysis -> {args.out}", file=sys.stderr)
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
+----
+
+### Run your analyzer script
+
+[source,sh,role="execute"]
+----
+python guidellm_llm_analyzer.py benchmarks.json \
+  --model-target http://localhost:8000/v1/chat/completions \
+  --model-name RedHatAI/gemma-3-1b-it-quantized.w8a8 \
+  --out llm_analysis.md
+----
+
+### Evaluate response of analyzer
+
+How did the summary from the scripted analyzer compare to your interpretations of the data?
+
+What is it suggesting as next steps?
+
+
