@@ -1,0 +1,18 @@
+theme: jekyll-theme-minimal
+title: "Fast, Cheap, and Accurate: Optimizing LLM Inference"
+description: "DeveloperWeek 2026 Workshop"
+
+# GitHub Pages settings
+baseurl: ""
+url: ""
+
+# Markdown settings
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+# Enable relative links
+relative_links:
+  enabled: true
+  collections: true
