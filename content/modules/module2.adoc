@@ -1,4 +1,15 @@
-# Module 2: Run our first benchmark with GuideLLM
+# Module 2: Benchmarking with GuideLLM
+
+**What you'll accomplish:** Measure your model's throughput and latency under load, then use the LLM itself to interpret the results.
+
+## Understanding the benchmark
+
+GuideLLM tests how fast your model can handle requests under various load patterns. It measures:
+- **Throughput**: Tokens generated per second
+- **Latency**: Time to first token (TTFT) and total response time
+- **Saturation point**: Where adding more requests stops improving throughput
+
+This helps you understand real-world performance under production-like conditions.
 
 ## Install GuideLLM
 
@@ -14,6 +25,13 @@ pip install guidellm
 guidellm benchmark   --target "http://localhost:8000"   --rate-type sweep   --max-seconds 30   --data "prompt_tokens=256,output_tokens=128"
 ----
 
+**What these parameters mean:**
+- `--rate-type sweep`: Runs multiple tests at different request rates (from low to high) to map your performance curve and find the saturation point
+- `--max-seconds 30`: Each test runs for up to 30 seconds
+- `--data "prompt_tokens=256,output_tokens=128"`: Simulates medium-length requests
+
+**What to watch for:** The terminal will show results for each rate tested. Look for where throughput plateaus—that's your max capacity.
+
 ## During benchmark, check gpu utilization
 
 Ensure you're in a second terminal window:
@@ -26,6 +44,10 @@ nvtop
 ## Evaluate benchmark results
 
 At the end of the benchmark run, GuideLLM creates a `benchmarks.json` file in your current directory in addition to a graphical output in your terminal. Let's take the `json` output and use our LLM to analyze the data. 
+
+### Why use the LLM to analyze its own performance?
+
+This demonstrates a practical AI use case: interpreting complex benchmark data. The LLM can identify patterns, bottlenecks, and recommendations faster than manual analysis.
 
 ### Create script to analyze json data with LLM 
 
@@ -607,6 +629,10 @@ if __name__ == "__main__":
 
 ----
 
+### Exit editor
+
+Close vim with kbd:[Esc] then `:wq!`
+
 ### Run your analyzer script
 
 [source,sh,role="execute"]
@@ -619,8 +645,8 @@ python guidellm_llm_analyzer.py benchmarks.json \
 
 ### Evaluate response of analyzer
 
-How did the summary from the scripted analyzer compare to your interpretations of the data?
-
-What is it suggesting as next steps?
-
+**What to look for in the analysis:**
+- Does it identify the saturation point correctly?
+- What tuning recommendations does it suggest?
+- How accurate is its interpretation compared to the raw data?
 

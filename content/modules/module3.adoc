@@ -1,4 +1,12 @@
-# Module 3: 
+# Module 3: Measuring Model Accuracy
+
+**What you'll accomplish:** Evaluate how quantization affects model accuracy using industry-standard benchmarks.
+
+## Why accuracy matters
+
+Performance is only half the story. We need to verify that the model we're choosing has the necessary accuracy for our use case.
+
+**lm-eval** is the industry standard for measuring LLM accuracy across hundreds of tasks. We'll use **ARC-Easy**, a dataset of elementary science questions that tests basic reasoning, for our example.
 
 ## Install lm-eval-harness framework
 
@@ -7,6 +15,7 @@
 pip install lm-eval[api]
 ----
 
+The `[api]` extra installs dependencies for evaluating models via API endpoints (like your vLLM server).
 
 ## Run basic evaluation on our quantized model for accuracy
 
@@ -18,3 +27,149 @@ lm-eval --model local-completions \
   --batch_size 8 \
   --output_path ./lm_eval_out_arc_easy.json
 ----
+
+**What these parameters mean:**
+- `--model local-completions`: Connect to an OpenAI-compatible API
+- `--tasks arc_easy`: Elementary science reasoning (1,752 multiple-choice questions)
+- `--batch_size 8`: Process 8 questions simultaneously
+- `--output_path`: Save detailed results to JSON
+
+**What happens:** lm-eval sends each question with answer choices, calculates which answer the model thinks is most likely, and compares to the correct answer.
+
+## Get quick summary of output
+
+[source,sh,role="execute"]
+----
+vim analyze_lmeval_results.py
+----
+
+Copy and paste the following python content into your file:
+
+[source,python,role="execute"]
+----
+#!/usr/bin/env python3
+"""
+Analyze lm-eval results using the Gemma LLM
+"""
+import json
+import sys
+from openai import OpenAI
+
+VLLM_API_BASE = "http://localhost:8000/v1"
+RESULTS_FILE = "lm_eval_out_arc_easy.json"
+
+def load_results(filename):
+    """Load the lm-eval JSON results"""
+    try:
+        with open(filename, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"Error: Could not find {filename}")
+        sys.exit(1)
+    except json.JSONDecodeError:
+        print(f"Error: Invalid JSON in {filename}")
+        sys.exit(1)
+
+def extract_metrics(results):
+    """Extract key metrics from lm-eval output"""
+    metrics = {}
+
+    # Navigate the JSON structure to find metrics
+    if 'results' in results:
+        for task_name, task_data in results['results'].items():
+            metrics[task_name] = {
+                'accuracy': task_data.get('acc,none', 'N/A'),
+                'accuracy_stderr': task_data.get('acc_stderr,none', 'N/A'),
+                'normalized_accuracy': task_data.get('acc_norm,none', 'N/A'),
+                'normalized_stderr': task_data.get('acc_norm_stderr,none', 'N/A')
+            }
+
+    # Add configuration info
+    if 'config' in results:
+        config = results['config']
+        metrics['config'] = {
+            'model': config.get('model', 'Unknown'),
+            'limit': config.get('limit', 'N/A'),
+            'batch_size': config.get('batch_size', 'N/A')
+        }
+
+    return metrics
+
+def analyze_with_llm(metrics):
+    """Send metrics to Gemma LLM for analysis"""
+    client = OpenAI(
+        base_url=VLLM_API_BASE,
+        api_key="dummy"  # vLLM doesn't require a real API key
+    )
+
+    # Create a prompt for the LLM
+    prompt = f"""Analyze these benchmark results from the ARC-Easy evaluation task and provide a brief 2-3 sentence summary of model performance:
+
+Results:
+{json.dumps(metrics, indent=2)}
+
+Provide a concise technical summary focusing on:
+1. The accuracy score and what it means
+2. Whether this is good/average/poor performance for this task
+3. Any notable observations
+
+Summary:"""
+
+    try:
+        response = client.chat.completions.create(
+            model="RedHatAI/gemma-3-1b-it-quantized.w8a8",
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=150,
+            temperature=0.7
+        )
+
+        return response.choices[0].message.content.strip()
+
+    except Exception as e:
+        print(f"Error calling LLM API: {e}")
+        sys.exit(1)
+
+def main():
+    """Main execution"""
+    print(f"Loading results from {RESULTS_FILE}...")
+    results = load_results(RESULTS_FILE)
+
+    print("Extracting metrics...")
+    metrics = extract_metrics(results)
+
+    print("\n" + "="*60)
+    print("BENCHMARK METRICS")
+    print("="*60)
+    print(json.dumps(metrics, indent=2))
+
+    print("\n" + "="*60)
+    print("LLM ANALYSIS")
+    print("="*60)
+    print("Analyzing with Gemma model...\n")
+
+    summary = analyze_with_llm(metrics)
+    print(summary)
+    print("\n" + "="*60)
+
+if __name__ == "__main__":
+    main()
+----
+
+## Close editor
+
+Close vim with kbd:[Esc] then `:wq!`
+
+## Run the analysis
+
+[source,sh,role="execute"]
+----
+python analyze_lmeval_results.py
+----
+
+**What you'll see:**
+1. Raw accuracy metrics (expect 65-75% for this quantized model)
+2. LLM's interpretation of whether that's good performance
+3. Comparison context (how this compares to other models/approaches)
+

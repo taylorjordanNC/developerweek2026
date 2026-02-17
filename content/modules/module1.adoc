@@ -1,4 +1,8 @@
-# Module 1: Set up environment and chat with model
+# Module 1: Environment Setup and Interactive Chat
+
+**What you'll accomplish:** Connect to a quantized Gemma model running in vLLM, verify it's working, and build a simple chat interface.
+
+First, let's confirm the vLLM server is running with your quantized model.
 
 ## Check version of vLLM inside of the provided RHAIIS image 
 
@@ -14,6 +18,8 @@ podman exec -it rhaiis vllm --version
 curl http://localhost:8000/v1/models
 ----
 
+**Expected output:** You should see `RedHatAI/gemma-3-1b-it-quantized.w8a8` in the response. This confirms vLLM is serving your quantized model via an OpenAI-compatible API.
+
 ## Install OpenAI python library
 
 [source,sh,role="execute"]
@@ -21,21 +27,9 @@ curl http://localhost:8000/v1/models
 pip install openai
 ----
 
-### What it is
+### Why OpenAI library?
 
-When you run `pip install openai`, you are installing a specialized client interface that allows your Python code to communicate with AI models via the OpenAI protocol. Since vLLM and RHAIIS are designed to "speak" this same protocol, this library acts as the perfect bridge.
-
-### What we're actually installing
-
-It isn't just one single file; it's a collection of tools and "dependencies" that work together to handle the complex networking required for AI:
-
-* The OpenAI Wrapper: This provides the high-level commands like client.chat.completions.create(). It turns your simple Python code into the complex JSON data the server needs.
-
-* HTTPX: This is the "engine" that handles the actual internet connection. It is responsible for sending your request and waiting for the AI to "talk" back.
-
-* Pydantic: A powerful tool used for data validation. It ensures that the response coming back from your model is formatted correctly so your script doesn't crash.
-
-* Typing Extensions: This adds support for modern Python type-hinting, which helps developers see errors in their code before they even run it.
+vLLM speaks the OpenAI API protocol, so we use the `openai` Python library as our client. This gives us a standardized way to send prompts and receive responses, just like you would with ChatGPT's API.
 
 ## Setup a custom in-terminal chat client
 
@@ -113,7 +107,12 @@ Press kbd:[Esc] to edit input mode. Then save:
 python chat.py
 ----
 
-Interact with the model, ask it a few basic questions.
+**Try these questions:**
+- "What is quantization?"
+- "Explain Red Hat Enterprise Linux in one sentence"
+- "What's the difference between vLLM and standard inference?"
+
+Watch how the model streams responses token-by-token.
 
 ### Check gpu utilization during chat
 
@@ -123,5 +122,7 @@ Open a second terminal window and ssh into the provided workshop instance. Run t
 ----
 nvtop
 ----
+
+**What to observe:** GPU memory usage and utilization spikes when generating responses.
 
 Now that we've set up a basic chat with our model and see how to view gpu utilization, let's run our first benchmark.
