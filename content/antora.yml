@@ -1,0 +1,27 @@
+name: modules
+title: Fast, Cheap, and Accurate: Optimizing LLM Inference with vLLM and Quantization
+version: main
+nav:
+  - modules/ROOT/nav.adoc
+
+asciidoc:
+  attributes:
+    release-version: main
+    page-pagination: true
+    experimental:
+    numbered:
+    lab_name: "Fast, Cheap, and Accurate: Optimizing LLM Inference with vLLM and Quantization"
+    guid: my-guid
+    ssh_user: lab-user
+    ssh_password: lab-user
+    ssh_command: ssh lab-user@bastion.{guid}.example.opentlc.com
+    company-name: "Red Hat"
+    ic-lab: "lab"
+    ic: "{company-name} {ic-lab}"
+    source-highlighter: highlightjs
+    deliverable: lab
+    productname-long: Red Hat OpenShift AI
+    productname-short: OpenShift AI
+    page-user: "{user}"
+    page-links: links
+    imagesdir: ../assets/images

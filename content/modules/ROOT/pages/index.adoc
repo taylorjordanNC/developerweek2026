@@ -1,0 +1,56 @@
+# Fast, Cheap, and Accurate: Optimizing LLM Inference with vLLM and Quantization
+
+Welcome to this hands-on workshop for DeveloperWeek 2026. During our time, you'll learn practical techniques for deploying high-performance language models in production environments.
+
+## The Challenge
+
+Large language models are powerful, but expensive to run:
+- High memory requirements
+- Slow inference speeds limiting throughput
+- GPU costs that increase with demand
+
+Production deployments need a different approach than research environments.
+
+## What You'll Learn
+
+This workshop demonstrates how to optimize LLM inference using two key technologies:
+
+**vLLM** - A high-performance inference engine that:
+- Uses paged attention for efficient memory management
+- Implements continuous batching for higher throughput
+- Provides an OpenAI-compatible API for easy integration
+
+**Quantization** - 8-bit integer weights and activations that:
+- Reduce memory footprint by ~50-60%
+- Improve throughput by 1.5-2x
+- Maintain accuracy within 3-8% of full precision
+
+You'll deploy a quantized model, benchmark its performance, and measure accuracy trade-offs—all with hands-on command-line tools.
+
+## Workshop Modules
+
+Use the navigation menu to follow along:
+
+**Module 1: Environment Setup and Interactive Chat**
+Build a streaming chat client that connects to a vLLM server running a quantized Gemma model. Monitor GPU utilization and understand OpenAI-compatible APIs.
+
+**Module 2: Benchmarking with GuideLLM**
+Measure throughput, latency, and saturation points under production-like loads. Use the LLM itself to interpret benchmark results.
+
+**Module 3: Measuring Model Accuracy**
+Evaluate reasoning capability using the ARC-Easy dataset. Quantify how much accuracy you're trading for performance gains.
+
+## Prerequisites
+
+You'll need:
+- Access to the provided workshop lab environment (GPU-enabled)
+- Basic familiarity with command-line tools
+- Python knowledge helpful but not required
+
+All code examples are provided—just copy, paste, and run.
+
+## Let's Begin
+
+Ready to optimize your LLM deployments? Start with **Module 1** in the navigation menu.
+
+

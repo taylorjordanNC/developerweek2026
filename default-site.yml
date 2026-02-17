@@ -1,7 +1,7 @@
 ---
 site:
   title: Fast, Cheap, and Accurate: Optimizing LLM Inference
-  url: https://github.com/rhpds/private-rh1-llmaas-showroom
+  url: https://github.com/taylorjordanNC/developerweek2026
   start_page: modules::index.adoc
 
 content:

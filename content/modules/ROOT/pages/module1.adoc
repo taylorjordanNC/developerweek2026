@@ -2,7 +2,13 @@
 
 **What you'll accomplish:** Connect to a quantized Gemma model running in vLLM, verify it's working, and build a simple chat interface.
 
-First, let's confirm the vLLM server is running with your quantized model.
+First, let's set up our local terminal
+
+## ssh to the system
+
+Using the ssh command given at the workshop link, ssh to the provided linux system. Open up two terminal windows.
+
+Next, confirm the vLLM server is running with your quantized model.
 
 ## Check version of vLLM inside of the provided RHAIIS image 
 

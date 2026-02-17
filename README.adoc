@@ -1,1 +1,23 @@
 
+# Fast, Cheap, and Accurate: Optimizing LLM Inference with vLLM and Quantization
+
+Workshop materials from DeveloperWeek 2026 demonstrating practical LLM deployment optimization using vLLM and W8A8 quantization.
+
+## Overview
+
+This repository contains three hands-on modules (found in content/modules/root/pages) covering:
+1. **Environment Setup & Interactive Chat** - Deploy a quantized model with vLLM, build a streaming chat client
+2. **Performance Benchmarking** - Measure throughput and latency using GuideLLM
+3. **Accuracy Evaluation** - Quantify model quality using lm-eval-harness on ARC-Easy
+
+Each module demonstrates the performance-accuracy trade-offs of deploying quantized models in production.
+
+## Running this lab on your own hardware
+
+### Prerequisites
+- Compatible linux or MacOS operating system for vLLM
+  - NOTE: For optimal performance, accelerator hardware is preferred but not required.
+- vLLM installed
+- Deployment of any vLLM-supported model
+  - You may find a list of validated, quantized models on the [Red Hat AI public Hugging Face repository](https://huggingface.co/RedHatAI). 
+- Python v3.10+

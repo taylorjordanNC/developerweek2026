@@ -1,0 +1,5 @@
+* xref:index.adoc[Introduction]
+* xref:module1.adoc[Module 1: Environment Setup and Interactive Chat]
+* xref:module2.adoc[Module 2: Benchmarking with GuideLLM]
+* xref:module3.adoc[Module 3: Measuring Model Accuracy]
+* xref:references.adoc[Resources]
