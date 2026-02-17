@@ -17,6 +17,8 @@ Next, confirm the vLLM server is running with your quantized model.
 podman exec -it rhaiis vllm --version
 ----
 
+This command will take a few seconds to process.
+
 ## Check models served by vLLM
 
 [source,sh,role="execute"]
@@ -99,11 +101,11 @@ while True:
 
 ### Close and save vim editor
 
-Press kbd:[Esc] to edit input mode. Then save:
+Press kbd:[Esc] to exit input mode. Then save:
 
 [source,sh,role="execute"]
 ----
-:wq!
+:wq
 ----
 
 ### Run the chat with your model
@@ -122,7 +124,7 @@ Watch how the model streams responses token-by-token.
 
 ### Check gpu utilization during chat
 
-Open a second terminal window and ssh into the provided workshop instance. Run the following command:
+If you don't already have a second terminal window open, do it now and ssh again into the provided workshop instance. Run the following command:
 
 [source,sh,role="execute"]
 ----
@@ -130,5 +132,9 @@ nvtop
 ----
 
 **What to observe:** GPU memory usage and utilization spikes when generating responses.
+
+### Exit chat
+
+When you're ready, exit chat by pressing kbd:[CTRL+C]
 
 Now that we've set up a basic chat with our model and see how to view gpu utilization, let's run our first benchmark.
