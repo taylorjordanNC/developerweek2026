@@ -633,7 +633,7 @@ if __name__ == "__main__":
 
 ### Exit editor
 
-Close vim with kbd:[Esc] then `:wq!`
+Close vim with kbd:[Esc] then `:wq`
 
 ### Run your analyzer script
 

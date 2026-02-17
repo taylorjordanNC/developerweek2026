@@ -1,5 +1,5 @@
 name: modules
-title: Fast, Cheap, and Accurate: Optimizing LLM Inference with vLLM and Quantization
+title: "Fast, Cheap, and Accurate: Optimizing LLM Inference with vLLM and Quantization"
 version: main
 nav:
   - modules/ROOT/nav.adoc
