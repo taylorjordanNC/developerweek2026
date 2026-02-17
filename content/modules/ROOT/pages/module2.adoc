@@ -642,8 +642,11 @@ Close vim with kbd:[Esc] then `:wq`
 python guidellm_llm_analyzer.py benchmarks.json \
   --model-target http://localhost:8000/v1/chat/completions \
   --model-name RedHatAI/gemma-3-1b-it-quantized.w8a8 \
+  --timeout 120 \
   --out llm_analysis.md
 ----
+
+The analysis will output directly in the CLI as well as the llm_analysis.md file.
 
 ### Evaluate response of analyzer
 

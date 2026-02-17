@@ -1,0 +1,58 @@
+# Closing Summary
+
+Congratulations! You've successfully deployed, benchmarked, and evaluated a quantized LLM using production-grade tools.
+
+## What You Accomplished
+
+**Module 1:** Built a streaming chat interface connecting to vLLM's OpenAI-compatible API
+
+**Module 2:** Measured real-world performance with GuideLLM and used the model to interpret its own benchmark data
+
+**Module 3:** Quantified accuracy trade-offs using industry-standard evaluation frameworks
+
+## Key Takeaways
+
+**Quantization delivers measurable benefits:**
+- ~50-60% memory reduction
+- 1.5-2x throughput improvement
+- 3-8% accuracy trade-off
+
+**vLLM optimizes production inference:**
+- Paged attention reduces memory waste
+- Continuous batching maximizes GPU utilization
+- OpenAI-compatible API enables drop-in replacement
+
+**Performance vs. accuracy is a spectrum:**
+Different quantization methods (W8A8, W4A16, GPTQ) offer different trade-offs. Choose based on your latency, cost, and quality requirements.
+
+## Next Steps
+
+**Try with your own models:**
+1. Browse quantized models at https://huggingface.co/RedHatAI
+2. Deploy with the same vLLM setup
+3. Run the same benchmarks to compare
+
+**Explore advanced optimization:**
+- Tensor parallelism for larger models
+- Speculative decoding for faster generation
+- Custom quantization with AutoGPTQ or AWQ
+
+**Production deployment:**
+- Integrate with Ray Serve or KServe
+- Add monitoring and observability
+- Implement rate limiting and autoscaling
+
+## Resources
+
+Continue learning:
+- **vLLM Documentation:** https://docs.vllm.ai/
+- **Quantization Guide:** https://huggingface.co/docs/optimum/concept_guides/quantization
+- **Red Hat AI:** https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-ai
+
+## Thank You
+
+Questions? Find us:
+- GitHub: https://github.com/taylorjordanNC/developerweek2026
+- Workshop materials: All code and scripts are in this repository
+
+Keep optimizing, and happy deploying!

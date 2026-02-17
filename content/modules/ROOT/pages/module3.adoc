@@ -51,12 +51,12 @@ Copy and paste the following python content into your file:
 """
 Analyze lm-eval results using the Gemma LLM
 """
+import argparse
 import json
 import sys
 from openai import OpenAI
 
 VLLM_API_BASE = "http://localhost:8000/v1"
-RESULTS_FILE = "lm_eval_out_arc_easy.json"
 
 def load_results(filename):
     """Load the lm-eval JSON results"""
@@ -133,8 +133,12 @@ Summary:"""
 
 def main():
     """Main execution"""
-    print(f"Loading results from {RESULTS_FILE}...")
-    results = load_results(RESULTS_FILE)
+    parser = argparse.ArgumentParser(description="Analyze lm-eval results using the LLM")
+    parser.add_argument("results_file", help="Path to the lm-eval JSON results file")
+    args = parser.parse_args()
+
+    print(f"Loading results from {args.results_file}...")
+    results = load_results(args.results_file)
 
     print("Extracting metrics...")
     metrics = extract_metrics(results)
@@ -163,13 +167,17 @@ Close vim with kbd:[Esc] then `:wq!`
 
 ## Run the analysis
 
-[source,sh,role="execute"]
+In the command, include the path to your lm-eval output as an argument:
+
+[source,sh]
 ----
-python analyze_lmeval_results.py
+python analyze_lmeval_results.py [path-to-lm_eval_out_arc_easy.json-file]
 ----
 
 **What you'll see:**
 1. Raw accuracy metrics (expect 65-75% for this quantized model)
 2. LLM's interpretation of whether that's good performance
 3. Comparison context (how this compares to other models/approaches)
+
+NOTE: Our accuracy test was a limited example, so the result is fairly low as a result. It's not the best reflection of the actual capabilities of the model.
 
