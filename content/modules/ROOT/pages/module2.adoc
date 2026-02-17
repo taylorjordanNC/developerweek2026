@@ -25,6 +25,8 @@ pip install guidellm
 guidellm benchmark   --target "http://localhost:8000"   --rate-type sweep   --max-seconds 30   --data "prompt_tokens=256,output_tokens=128"
 ----
 
+NOTE: The benchmark will take about 5 minutes to process.
+
 **What these parameters mean:**
 - `--rate-type sweep`: Runs multiple tests at different request rates (from low to high) to map your performance curve and find the saturation point
 - `--max-seconds 30`: Each test runs for up to 30 seconds
