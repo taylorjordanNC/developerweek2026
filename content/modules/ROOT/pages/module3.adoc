@@ -29,10 +29,11 @@ lm-eval --model local-completions \
 ----
 
 **What these parameters mean:**
-- `--model local-completions`: Connect to an OpenAI-compatible API
-- `--tasks arc_easy`: Elementary science reasoning (1,752 multiple-choice questions)
-- `--batch_size 8`: Process 8 questions simultaneously
-- `--output_path`: Save detailed results to JSON
+
+* `--model local-completions`: Connect to an OpenAI-compatible API
+* `--tasks arc_easy`: Elementary science reasoning (1,752 multiple-choice questions)
+* `--batch_size 8`: Process 8 questions simultaneously
+* `--output_path`: Save detailed results to JSON
 
 **What happens:** lm-eval sends each question with answer choices, calculates which answer the model thinks is most likely, and compares to the correct answer.
 
@@ -175,9 +176,10 @@ python analyze_lmeval_results.py [path-to-lm_eval_out_arc_easy.json-file]
 ----
 
 **What you'll see:**
-1. Raw accuracy metrics (expect 65-75% for this quantized model)
-2. LLM's interpretation of whether that's good performance
-3. Comparison context (how this compares to other models/approaches)
+
+. Raw accuracy metrics (expect 65-75% for this quantized model)
+. LLM's interpretation of whether that's good performance
+. Comparison context (how this compares to other models/approaches)
 
 NOTE: Our accuracy test was a limited example, so the result is fairly low as a result. It's not the best reflection of the actual capabilities of the model.
 

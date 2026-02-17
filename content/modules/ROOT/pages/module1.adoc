@@ -4,7 +4,7 @@
 
 First, let's set up our local terminal
 
-## ssh to the system
+## ssh into the system
 
 Using the ssh command given at the workshop link, ssh to the provided linux system. Open up two terminal windows.
 
@@ -116,9 +116,10 @@ python chat.py
 ----
 
 **Try these questions:**
-- "What is quantization?"
-- "Explain Red Hat Enterprise Linux in one sentence"
-- "What's the difference between vLLM and standard inference?"
+
+* "What is quantization?"
+* "Explain Red Hat Enterprise Linux in one sentence"
+* "What's the difference between vLLM and standard inference?"
 
 Watch how the model streams responses token-by-token.
 

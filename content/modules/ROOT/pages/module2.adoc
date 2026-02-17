@@ -5,9 +5,10 @@
 ## Understanding the benchmark
 
 GuideLLM tests how fast your model can handle requests under various load patterns. It measures:
-- **Throughput**: Tokens generated per second
-- **Latency**: Time to first token (TTFT) and total response time
-- **Saturation point**: Where adding more requests stops improving throughput
+
+* **Throughput**: Tokens generated per second
+* **Latency**: Time to first token (TTFT) and total response time
+* **Saturation point**: Where adding more requests stops improving throughput
 
 This helps you understand real-world performance under production-like conditions.
 
@@ -28,9 +29,10 @@ guidellm benchmark   --target "http://localhost:8000"   --rate-type sweep   --ma
 NOTE: The benchmark will take about 5 minutes to process.
 
 **What these parameters mean:**
-- `--rate-type sweep`: Runs multiple tests at different request rates (from low to high) to map your performance curve and find the saturation point
-- `--max-seconds 30`: Each test runs for up to 30 seconds
-- `--data "prompt_tokens=256,output_tokens=128"`: Simulates medium-length requests
+
+* `--rate-type sweep`: Runs multiple tests at different request rates (from low to high) to map your performance curve and find the saturation point
+* `--max-seconds 30`: Each test runs for up to 30 seconds
+* `--data "prompt_tokens=256,output_tokens=128"`: Simulates medium-length requests
 
 **What to watch for:** The terminal will show results for each rate tested. Look for where throughput plateaus—that's your max capacity.
 
@@ -651,7 +653,8 @@ The analysis will output directly in the CLI as well as the llm_analysis.md file
 ### Evaluate response of analyzer
 
 **What to look for in the analysis:**
-- Does it identify the saturation point correctly?
-- What tuning recommendations does it suggest?
-- How accurate is its interpretation compared to the raw data?
+
+* Does it identify the saturation point correctly?
+* What tuning recommendations does it suggest?
+* How accurate is its interpretation compared to the raw data?
 

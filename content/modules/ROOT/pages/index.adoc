@@ -5,9 +5,9 @@ Welcome to this hands-on workshop for DeveloperWeek 2026. During our time, you'l
 ## The Challenge
 
 Large language models are powerful, but expensive to run:
-- High memory requirements
-- Slow inference speeds limiting throughput
-- GPU costs that increase with demand
+* High memory requirements
+* Slow inference speeds limiting throughput
+* GPU costs that increase with demand
 
 Production deployments need a different approach than research environments.
 
@@ -16,14 +16,16 @@ Production deployments need a different approach than research environments.
 This workshop demonstrates how to optimize LLM inference using two key technologies:
 
 **vLLM** - A high-performance inference engine that:
-- Uses paged attention for efficient memory management
-- Implements continuous batching for higher throughput
-- Provides an OpenAI-compatible API for easy integration
+
+* Uses paged attention for efficient memory management
+* Implements continuous batching for higher throughput
+* Provides an OpenAI-compatible API for easy integration
 
 **Quantization** - 8-bit integer weights and activations that:
-- Reduce memory footprint by ~50-60%
-- Improve throughput by 1.5-2x
-- Maintain accuracy within 3-8% of full precision
+
+* Reduce memory footprint by ~50-60%
+* Improve throughput by 1.5-2x
+* Maintain accuracy within 3-8% of full precision
 
 You'll deploy a quantized model, benchmark its performance, and measure accuracy trade-offs—all with hands-on command-line tools.
 
@@ -43,9 +45,10 @@ Evaluate reasoning capability using the ARC-Easy dataset. Quantify how much accu
 ## Prerequisites
 
 You'll need:
-- Access to the provided workshop lab environment (GPU-enabled)
-- Basic familiarity with command-line tools
-- Python knowledge helpful but not required
+
+* Access to the provided workshop lab environment (GPU-enabled)
+* Basic familiarity with command-line tools
+* Python knowledge helpful but not required
 
 All code examples are provided—just copy, paste, and run.
 
