@@ -650,6 +650,8 @@ python guidellm_llm_analyzer.py benchmarks.json \
 
 The analysis will output directly in the CLI as well as the llm_analysis.md file.
 
+NOTE: If you would like a different type of summary, you can edit the user prompt section in the above script.
+
 ### Evaluate response of analyzer
 
 **What to look for in the analysis:**
